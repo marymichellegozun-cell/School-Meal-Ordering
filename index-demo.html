@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>School Meal Ordering System</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --primary:#4858df; --primary2:#6746c7; --bg:#f4f6fb; --card:#ffffff;
+  --text:#172033; --muted:#6c7485; --border:#dce1eb; --success:#176b32;
+  --warn:#805000; --danger:#a02020; --soft:#f6f7ff;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text);padding-bottom:40px}
+header{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;padding:24px 18px;border-radius:0 0 24px 24px}
+header h1{margin:0;font-size:24px}
+header p{margin:6px 0 0;opacity:.9}
+.container{max-width:980px;margin:auto;padding:16px}
+.card{background:var(--card);padding:18px;border-radius:18px;margin-bottom:15px;box-shadow:0 3px 14px rgba(0,0,0,.06)}
+h2,h3{margin-top:0}
+label{display:block;font-weight:600;margin:12px 0 5px}
+input,select,textarea{width:100%;padding:12px 13px;border:1px solid var(--border);border-radius:12px;font-size:16px;background:#fff}
+textarea{min-height:80px;resize:vertical}
+button{border:0;border-radius:12px;padding:12px 15px;font-size:14px;font-weight:700;margin:4px 2px;cursor:pointer}
+.primary{background:var(--primary);color:#fff}
+.secondary{background:#eceeff;color:#3543bc}
+.danger{background:#fff0f0;color:var(--danger)}
+.success-btn{background:#ecf8ef;color:var(--success)}
+.hidden{display:none!important}
+.tabs{display:flex;gap:8px;margin-bottom:15px}
+.tabs button{flex:1;min-height:44px}
+.menu-box{background:var(--soft);padding:15px;border-radius:14px;line-height:1.7}
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.stat{background:#f5f6fa;border-radius:14px;padding:14px;text-align:center}
+.stat strong{display:block;font-size:22px;margin-top:4px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{border-bottom:1px solid #e2e5ec;padding:9px 6px;text-align:left;vertical-align:top}
+.amount{text-align:right}
+.small{font-size:13px;color:var(--muted)}
+.success{background:#edf9f0;color:var(--success);padding:12px;border-radius:12px;margin-top:12px}
+.warning{background:#fff6e8;color:var(--warn);padding:12px;border-radius:12px;margin-top:12px}
+.error{background:#fff0f0;color:var(--danger);padding:12px;border-radius:12px;margin-top:12px}
+.admin-only{background:#fffaf0;border:1px solid #efdfb4}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end}
+.toolbar > div{flex:1;min-width:160px}
+.badge{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;background:#eef0f8}
+.section-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.section-tabs button{background:#eef0f8;color:#2f3a55}
+.section-tabs button.active{background:var(--primary);color:#fff}
+.grid2{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:700px){
+  .stat-grid{grid-template-columns:repeat(4,1fr)}
+  .grid2{grid-template-columns:1fr 1fr}
+}
+@media print{
+  body{background:#fff}
+  header,.tabs,.section-tabs,.no-print,.cadet-section{display:none!important}
+  .container{max-width:none;padding:0}
+  .card{box-shadow:none;border:0}
+  .billing-print{display:block!important}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>School Meal Ordering</h1>
+  <p>Cadet Meal Reservation & Weekly Provider Billing</p>
+</header>
+
+<div class="container">
+  <div class="tabs no-print">
+    <button id="cadetTab" class="primary" onclick="showCadet()">Cadet</button>
+    <button id="adminTab" class="secondary" onclick="requestAdmin()">Provider / Admin</button>
+  </div>
+
+  <!-- CADET VIEW -->
+  <section id="cadetView" class="cadet-section">
+    <div class="card">
+      <h2>Today's Meal</h2>
+      <div class="small" id="todayDate"></div>
+      <div class="menu-box" style="margin-top:10px">
+        <strong id="cadetMenuTitle">Today's Meal Package</strong>
+        <div id="cadetMenuDetails">Menu will be posted by the provider.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Reserve Your Meal</h2>
+
+      <label>Batch / Class</label>
+      <select id="studentBatch" onchange="loadStudentDropdown()">
+        <option value="">Select Batch / Class</option>
+      </select>
+
+      <label>Cadet Name</label>
+      <select id="studentName">
+        <option value="">Select Batch / Class First</option>
+      </select>
+
+      <label>Special Instruction <span class="small">(Optional)</span></label>
+      <textarea id="studentNote" placeholder="Example: No vegetables"></textarea>
+
+      <button class="primary" onclick="submitOrder()">Submit Meal Order</button>
+      <div id="cadetMessage"></div>
+    </div>
+  </section>
+
+  <!-- ADMIN LOGIN -->
+  <section id="adminLogin" class="hidden">
+    <div class="card">
+      <h2>Provider / Admin Access</h2>
+      <p class="small">Enter the admin PIN to access roster, meal records and billing.</p>
+      <label>Admin PIN</label>
+      <input id="adminPin" type="password" inputmode="numeric" placeholder="Enter PIN">
+      <button class="primary" onclick="loginAdmin()">Open Admin</button>
+      <button class="secondary" onclick="showCadet()">Cancel</button>
+      <div id="loginMessage"></div>
+    </div>
+  </section>
+
+  <!-- ADMIN VIEW -->
+  <section id="adminView" class="hidden">
+    <div class="section-tabs no-print">
+      <button id="btnMenu" onclick="showAdminSection('menu')">Daily Menu</button>
+      <button id="btnCadets" onclick="showAdminSection('cadets')">Cadets</button>
+      <button id="btnOrders" onclick="showAdminSection('orders')">Daily Orders</button>
+      <button id="btnBilling" onclick="showAdminSection('billing')">Weekly Billing</button>
+      <button id="btnSettings" onclick="showAdminSection('settings')">Settings</button>
+    </div>
+
+    <!-- MENU -->
+    <div id="adminMenuSection">
+      <div class="card admin-only">
+        <h2>Daily Menu Setup</h2>
+        <label>Menu Date</label>
+        <input id="menuDate" type="date">
+
+        <label>Menu Title</label>
+        <input id="menuTitle" placeholder="Example: Chicken Teriyaki Package">
+
+        <label>Package Contents</label>
+        <textarea id="menuDetails" placeholder="Chicken Teriyaki&#10;Steamed Rice&#10;Vegetables&#10;Dessert&#10;Water"></textarea>
+
+        <button class="primary" onclick="saveMenu()">Save Daily Menu</button>
+        <div id="menuMessage"></div>
+      </div>
+    </div>
+
+    <!-- CADETS -->
+    <div id="adminCadetsSection" class="hidden">
+      <div class="card">
+        <h2>Cadet / Batch Management</h2>
+        <p class="small">Add new cadets, edit existing records, or mark graduates as Inactive. Old meal and billing history is retained.</p>
+
+        <div class="grid2">
+          <div>
+            <label>Cadet Name</label>
+            <input id="cadetNameInput" placeholder="Full name">
+          </div>
+          <div>
+            <label>Batch / Class</label>
+            <input id="cadetBatchInput" placeholder="Example: A320 Batch 01">
+          </div>
+        </div>
+
+        <label>Status</label>
+        <select id="cadetStatusInput">
+          <option>Active</option>
+          <option>Inactive</option>
+          <option>Graduated</option>
+        </select>
+
+        <input type="hidden" id="editingCadetId">
+        <button class="primary" onclick="saveCadet()">Save Cadet</button>
+        <button class="secondary" onclick="clearCadetForm()">Clear</button>
+        <div id="cadetAdminMessage"></div>
+      </div>
+
+      <div class="card">
+        <h3>Import Cadet List</h3>
+        <p class="small">Accepted columns: <b>Cadet Name</b>, <b>Batch</b>, <b>Status</b>. You can import CSV or Excel (.xlsx).</p>
+        <input id="rosterFile" type="file" accept=".csv,.xlsx,.xls">
+        <button class="secondary" onclick="importRoster()">Import Roster</button>
+        <button class="secondary" onclick="downloadRosterTemplate()">Download Template</button>
+        <div id="importMessage"></div>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <div>
+            <label>Filter Batch</label>
+            <select id="cadetBatchFilter" onchange="renderCadets()">
+              <option value="">All Batches</option>
+            </select>
+          </div>
+          <div>
+            <label>Filter Status</label>
+            <select id="cadetStatusFilter" onchange="renderCadets()">
+              <option value="">All Status</option>
+              <option>Active</option>
+              <option>Inactive</option>
+              <option>Graduated</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Cadet</th><th>Batch</th><th>Status</th><th class="no-print">Action</th></tr></thead>
+            <tbody id="cadetTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ORDERS -->
+    <div id="adminOrdersSection" class="hidden">
+      <div class="card">
+        <h2>Daily Orders</h2>
+        <label>Order Date</label>
+        <input id="orderDateFilter" type="date" onchange="renderOrders()">
+
+        <div class="stat-grid" style="margin-top:12px">
+          <div class="stat">Ordered<strong id="orderedCount">0</strong></div>
+          <div class="stat">Served<strong id="servedCount">0</strong></div>
+          <div class="stat">Cancelled<strong id="cancelledCount">0</strong></div>
+          <div class="stat">Active Cadets<strong id="activeCadetCount">0</strong></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Batch</th><th>Cadet</th><th>Status</th><th>Note</th><th>Time</th><th class="no-print">Action</th></tr></thead>
+            <tbody id="orderTable"></tbody>
+          </table>
+        </div>
+        <div id="noOrders" class="small">No orders for this date.</div>
+      </div>
+    </div>
+
+    <!-- BILLING -->
+    <div id="adminBillingSection" class="hidden billing-print">
+      <div class="card admin-only">
+        <h2>Weekly Billing</h2>
+        <div class="grid2">
+          <div>
+            <label>Week Start</label>
+            <input id="weekStart" type="date" onchange="renderWeeklyBilling()">
+          </div>
+          <div>
+            <label>Rate per Billable Meal</label>
+            <input id="rateInput" type="number" min="0" step="0.01" onchange="saveRate()">
+          </div>
+        </div>
+        <p class="small">Billing is based on meals marked <b>Served</b>. The rate is visible only in Provider/Admin.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Day</th><th>Billable Meals</th><th class="amount">Rate</th><th class="amount">Amount</th></tr></thead>
+            <tbody id="weeklyTable"></tbody>
+            <tfoot><tr><th colspan="2">Weekly Total</th><th id="weeklyMeals">0</th><th></th><th class="amount" id="weeklyAmount">₱0.00</th></tr></tfoot>
+          </table>
+        </div>
+
+        <div class="no-print" style="margin-top:12px">
+          <button class="primary" onclick="window.print()">Generate PDF / Print</button>
+          <button class="secondary" onclick="exportWeeklyBillingCSV()">Export Billing Excel/CSV</button>
+          <button class="secondary" onclick="exportWeeklyDetailCSV()">Export Detailed Orders</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="adminSettingsSection" class="hidden">
+      <div class="card">
+        <h2>Settings</h2>
+        <label>Change Admin PIN</label>
+        <input id="newPin" type="password" inputmode="numeric" placeholder="New PIN">
+        <button class="primary" onclick="changePin()">Save New PIN</button>
+        <div id="pinMessage"></div>
+      </div>
+      <div class="card no-print">
+        <button class="secondary" onclick="showCadet()">Back to Cadet View</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+const STORAGE_KEYS = {
+  cadets:'meal_cadets_v2',
+  menus:'meal_menus_v2',
+  orders:'meal_orders_v2',
+  rate:'meal_rate_v2',
+  pin:'meal_admin_pin_v2'
+};
+
+const DEFAULT_CADETS = [
+  {id:'c1',name:'Adrian Cruz',batch:'A320 Batch 2026-09A',status:'Active'},
+  {id:'c2',name:'Bianca Reyes',batch:'A320 Batch 2026-09A',status:'Active'},
+  {id:'c3',name:'Carlo Mendoza',batch:'A320 Batch 2026-09A',status:'Active'},
+  {id:'c4',name:'Daniel Garcia',batch:'A320 Batch 2026-09A',status:'Active'},
+  {id:'c5',name:'Ella Santos',batch:'A320 Batch 2026-09A',status:'Active'},
+  {id:'c6',name:'Francis Lim',batch:'A320 Batch 2026-09B',status:'Active'},
+  {id:'c7',name:'Gabrielle Tan',batch:'A320 Batch 2026-09B',status:'Active'},
+  {id:'c8',name:'Henry Bautista',batch:'A320 Batch 2026-09B',status:'Active'},
+  {id:'c9',name:'Isabel Navarro',batch:'A320 Batch 2026-09B',status:'Active'},
+  {id:'c10',name:'Joshua Ramos',batch:'A320 Batch 2026-09B',status:'Active'},
+  {id:'c11',name:'Kevin Flores',batch:'PPL Batch 12',status:'Active'},
+  {id:'c12',name:'Lara Villanueva',batch:'PPL Batch 12',status:'Active'},
+  {id:'c13',name:'Miguel Torres',batch:'PPL Batch 12',status:'Active'},
+  {id:'c14',name:'Nina Castillo',batch:'PPL Batch 12',status:'Active'},
+  {id:'c15',name:'Oliver Sy',batch:'PPL Batch 12',status:'Graduated'}
+];
+
+let cadets = loadJSON(STORAGE_KEYS.cadets, DEFAULT_CADETS);
+let menus = loadJSON(STORAGE_KEYS.menus, {});
+let orders = loadJSON(STORAGE_KEYS.orders, []);
+let RATE = Number(localStorage.getItem(STORAGE_KEYS.rate) || 300);
+let ADMIN_PIN = localStorage.getItem(STORAGE_KEYS.pin) || '1234';
+
+const today = localDateKey(new Date());
+document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-PH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+document.getElementById('menuDate').value = today;
+document.getElementById('orderDateFilter').value = today;
+document.getElementById('weekStart').value = getMonday(today);
+document.getElementById('rateInput').value = RATE;
+
+const DEMO_MENUS = {};
+DEMO_MENUS[today] = {
+  title:'Chicken Teriyaki Meal Package',
+  details:'Chicken Teriyaki\nSteamed Rice\nMixed Vegetables\nFresh Fruit\nBottled Water'
+};
+
+const DEMO_ORDERS = [
+  {id:'o1',date:today,cadetId:'c1',cadetName:'Adrian Cruz',batch:'A320 Batch 2026-09A',note:'No vegetables',status:'Served',time:'8:10 AM'},
+  {id:'o2',date:today,cadetId:'c2',cadetName:'Bianca Reyes',batch:'A320 Batch 2026-09A',note:'',status:'Served',time:'8:15 AM'},
+  {id:'o3',date:today,cadetId:'c3',cadetName:'Carlo Mendoza',batch:'A320 Batch 2026-09A',note:'',status:'Ordered',time:'8:19 AM'},
+  {id:'o4',date:today,cadetId:'c6',cadetName:'Francis Lim',batch:'A320 Batch 2026-09B',note:'No dessert',status:'Served',time:'8:24 AM'},
+  {id:'o5',date:today,cadetId:'c7',cadetName:'Gabrielle Tan',batch:'A320 Batch 2026-09B',note:'',status:'Ordered',time:'8:28 AM'},
+  {id:'o6',date:today,cadetId:'c11',cadetName:'Kevin Flores',batch:'PPL Batch 12',note:'',status:'Served',time:'8:31 AM'},
+  {id:'o7',date:today,cadetId:'c12',cadetName:'Lara Villanueva',batch:'PPL Batch 12',note:'',status:'Cancelled',time:'8:35 AM'}
+];
+
+if(!localStorage.getItem(STORAGE_KEYS.menus)){
+  menus = DEMO_MENUS;
+}
+if(!localStorage.getItem(STORAGE_KEYS.orders)){
+  orders = DEMO_ORDERS;
+}
+saveAll();
+
+
+function loadJSON(key, fallback){
+  try{
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(fallback));
+  }catch(e){ return JSON.parse(JSON.stringify(fallback)); }
+}
+function saveAll(){
+  localStorage.setItem(STORAGE_KEYS.cadets, JSON.stringify(cadets));
+  localStorage.setItem(STORAGE_KEYS.menus, JSON.stringify(menus));
+  localStorage.setItem(STORAGE_KEYS.orders, JSON.stringify(orders));
+}
+function localDateKey(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function esc(v){
+  return String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;");
+}
+function peso(n){
+  return '₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function uid(){
+  return 'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+}
+
+function showCadet(){
+  document.getElementById('cadetView').classList.remove('hidden');
+  document.getElementById('adminLogin').classList.add('hidden');
+  document.getElementById('adminView').classList.add('hidden');
+  document.getElementById('cadetTab').className='primary';
+  document.getElementById('adminTab').className='secondary';
+  renderCadetView();
+}
+function requestAdmin(){
+  document.getElementById('cadetView').classList.add('hidden');
+  document.getElementById('adminLogin').classList.remove('hidden');
+  document.getElementById('adminView').classList.add('hidden');
+}
+function loginAdmin(){
+  const val=document.getElementById('adminPin').value;
+  if(val!==ADMIN_PIN){
+    document.getElementById('loginMessage').innerHTML='<div class="error">Incorrect PIN.</div>'; return;
+  }
+  document.getElementById('loginMessage').innerHTML='';
+  document.getElementById('adminLogin').classList.add('hidden');
+  document.getElementById('adminView').classList.remove('hidden');
+  document.getElementById('cadetTab').className='secondary';
+  document.getElementById('adminTab').className='primary';
+  showAdminSection('menu');
+  renderAllAdmin();
+}
+function showAdminSection(name){
+  const sections=['Menu','Cadets','Orders','Billing','Settings'];
+  sections.forEach(s=>{
+    document.getElementById('admin'+s+'Section').classList.toggle('hidden', s.toLowerCase()!==name);
+    const btn=document.getElementById('btn'+s);
+    if(btn) btn.classList.toggle('active', s.toLowerCase()===name);
+  });
+  if(name==='cadets') renderCadets();
+  if(name==='orders') renderOrders();
+  if(name==='billing') renderWeeklyBilling();
+  if(name==='menu') loadMenuForm();
+}
+function renderCadetView(){
+  const menu=menus[today] || {};
+  document.getElementById('cadetMenuTitle').textContent=menu.title || "Today's Meal Package";
+  document.getElementById('cadetMenuDetails').innerHTML=esc(menu.details || 'Menu will be posted by the provider.').replace(/\n/g,'<br>');
+  refreshBatchDropdowns();
+  loadStudentDropdown();
+}
+function refreshBatchDropdowns(){
+  const batches=[...new Set(cadets.filter(c=>c.status==='Active').map(c=>c.batch).filter(Boolean))].sort();
+  const studentBatch=document.getElementById('studentBatch');
+  const current=studentBatch.value;
+  studentBatch.innerHTML='<option value="">Select Batch / Class</option>'+batches.map(b=>`<option ${b===current?'selected':''}>${esc(b)}</option>`).join('');
+  const filter=document.getElementById('cadetBatchFilter');
+  const fcur=filter.value;
+  filter.innerHTML='<option value="">All Batches</option>'+[...new Set(cadets.map(c=>c.batch).filter(Boolean))].sort().map(b=>`<option ${b===fcur?'selected':''}>${esc(b)}</option>`).join('');
+}
+function loadStudentDropdown(){
+  const batch=document.getElementById('studentBatch').value;
+  const select=document.getElementById('studentName');
+  const list=cadets.filter(c=>c.status==='Active' && c.batch===batch).sort((a,b)=>a.name.localeCompare(b.name));
+  select.innerHTML='<option value="">Select Cadet</option>'+list.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+}
+function submitOrder(){
+  const cadetId=document.getElementById('studentName').value;
+  const cadet=cadets.find(c=>c.id===cadetId);
+  const msg=document.getElementById('cadetMessage');
+  if(!cadet){ msg.innerHTML='<div class="warning">Please select your batch and name.</div>'; return; }
+  const duplicate=orders.some(o=>o.date===today && o.cadetId===cadetId && o.status!=='Cancelled');
+  if(duplicate){ msg.innerHTML='<div class="warning">You already submitted your meal order today.</div>'; return; }
+  orders.push({
+    id:uid(), date:today, cadetId:cadet.id, cadetName:cadet.name, batch:cadet.batch,
+    note:document.getElementById('studentNote').value.trim(), status:'Ordered',
+    time:new Date().toLocaleTimeString('en-PH',{hour:'numeric',minute:'2-digit'})
+  });
+  saveAll();
+  msg.innerHTML='<div class="success">Your meal order has been submitted.</div>';
+  document.getElementById('studentName').value='';
+  document.getElementById('studentNote').value='';
+}
+function loadMenuForm(){
+  const date=document.getElementById('menuDate').value || today;
+  const menu=menus[date] || {};
+  document.getElementById('menuTitle').value=menu.title || '';
+  document.getElementById('menuDetails').value=menu.details || '';
+}
+document.getElementById('menuDate').addEventListener('change', loadMenuForm);
+function saveMenu(){
+  const date=document.getElementById('menuDate').value;
+  if(!date){ document.getElementById('menuMessage').innerHTML='<div class="warning">Select a menu date.</div>'; return; }
+  menus[date]={
+    title:document.getElementById('menuTitle').value.trim() || "Today's Meal Package",
+    details:document.getElementById('menuDetails').value.trim()
+  };
+  saveAll(); renderCadetView();
+  document.getElementById('menuMessage').innerHTML='<div class="success">Menu saved.</div>';
+}
+
+function saveCadet(){
+  const name=document.getElementById('cadetNameInput').value.trim();
+  const batch=document.getElementById('cadetBatchInput').value.trim();
+  const status=document.getElementById('cadetStatusInput').value;
+  const editId=document.getElementById('editingCadetId').value;
+  const msg=document.getElementById('cadetAdminMessage');
+  if(!name || !batch){ msg.innerHTML='<div class="warning">Cadet name and batch are required.</div>'; return; }
+  if(editId){
+    const c=cadets.find(x=>x.id===editId);
+    if(c){ c.name=name; c.batch=batch; c.status=status; }
+  }else{
+    cadets.push({id:uid(),name,batch,status});
+  }
+  saveAll(); clearCadetForm(); renderCadets(); renderCadetView();
+  msg.innerHTML='<div class="success">Cadet record saved.</div>';
+}
+function clearCadetForm(){
+  document.getElementById('cadetNameInput').value='';
+  document.getElementById('cadetBatchInput').value='';
+  document.getElementById('cadetStatusInput').value='Active';
+  document.getElementById('editingCadetId').value='';
+}
+function editCadet(id){
+  const c=cadets.find(x=>x.id===id); if(!c)return;
+  document.getElementById('cadetNameInput').value=c.name;
+  document.getElementById('cadetBatchInput').value=c.batch;
+  document.getElementById('cadetStatusInput').value=c.status;
+  document.getElementById('editingCadetId').value=c.id;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function renderCadets(){
+  refreshBatchDropdowns();
+  const batchF=document.getElementById('cadetBatchFilter').value;
+  const statusF=document.getElementById('cadetStatusFilter').value;
+  const rows=cadets.filter(c=>(!batchF||c.batch===batchF)&&(!statusF||c.status===statusF)).sort((a,b)=>a.batch.localeCompare(b.batch)||a.name.localeCompare(b.name));
+  document.getElementById('cadetTable').innerHTML=rows.map(c=>`
+    <tr><td>${esc(c.name)}</td><td>${esc(c.batch)}</td><td><span class="badge">${esc(c.status)}</span></td>
+    <td class="no-print"><button class="secondary" onclick="editCadet('${esc(c.id)}')">Edit</button></td></tr>`).join('');
+}
+function downloadRosterTemplate(){
+  const csv='Cadet Name,Batch,Status\nJuan Dela Cruz,A320 Batch 01,Active\nMaria Santos,A320 Batch 01,Active\n';
+  downloadBlob(csv,'Cadet_Roster_Template.csv','text/csv;charset=utf-8');
+}
+function importRoster(){
+  const file=document.getElementById('rosterFile').files[0];
+  const msg=document.getElementById('importMessage');
+  if(!file){ msg.innerHTML='<div class="warning">Choose a CSV or Excel file first.</div>'; return; }
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      let rows=[];
+      if(file.name.toLowerCase().endsWith('.csv')){
+        const text=e.target.result;
+        rows=parseCSV(text);
+      }else{
+        if(typeof XLSX==='undefined') throw new Error('Excel library could not load. Please use CSV instead.');
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      }
+      let added=0;
+      rows.forEach(r=>{
+        const name=String(r['Cadet Name']||r['Name']||r['cadet name']||'').trim();
+        const batch=String(r['Batch']||r['Class']||r['batch']||'').trim();
+        let status=String(r['Status']||r['status']||'Active').trim()||'Active';
+        if(!['Active','Inactive','Graduated'].includes(status)) status='Active';
+        if(name&&batch){
+          const existing=cadets.find(c=>c.name.toLowerCase()===name.toLowerCase()&&c.batch.toLowerCase()===batch.toLowerCase());
+          if(existing){ existing.status=status; }
+          else { cadets.push({id:uid(),name,batch,status}); added++; }
+        }
+      });
+      saveAll(); renderCadets(); renderCadetView();
+      msg.innerHTML=`<div class="success">Import completed. ${added} new cadet(s) added.</div>`;
+    }catch(err){
+      msg.innerHTML='<div class="error">'+esc(err.message)+'</div>';
+    }
+  };
+  if(file.name.toLowerCase().endsWith('.csv')) reader.readAsText(file);
+  else reader.readAsArrayBuffer(file);
+}
+function parseCSV(text){
+  const lines=text.replace(/\r/g,'').split('\n').filter(x=>x.trim());
+  if(!lines.length)return[];
+  const headers=splitCSVLine(lines[0]);
+  return lines.slice(1).map(line=>{
+    const vals=splitCSVLine(line); const o={};
+    headers.forEach((h,i)=>o[h]=vals[i]??''); return o;
+  });
+}
+function splitCSVLine(line){
+  const out=[]; let cur='', q=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){
+      if(q && line[i+1]==='"'){cur+='"';i++} else q=!q;
+    }else if(ch===','&&!q){out.push(cur.trim());cur=''} else cur+=ch;
+  }
+  out.push(cur.trim()); return out;
+}
+
+function renderOrders(){
+  const date=document.getElementById('orderDateFilter').value || today;
+  const dayOrders=orders.filter(o=>o.date===date);
+  const active=dayOrders.filter(o=>o.status!=='Cancelled').length;
+  const served=dayOrders.filter(o=>o.status==='Served').length;
+  const cancelled=dayOrders.filter(o=>o.status==='Cancelled').length;
+  document.getElementById('orderedCount').textContent=active;
+  document.getElementById('servedCount').textContent=served;
+  document.getElementById('cancelledCount').textContent=cancelled;
+  document.getElementById('activeCadetCount').textContent=cadets.filter(c=>c.status==='Active').length;
+  document.getElementById('orderTable').innerHTML=dayOrders.map(o=>`
+    <tr>
+      <td>${esc(o.batch)}</td><td>${esc(o.cadetName)}</td><td><span class="badge">${esc(o.status)}</span></td>
+      <td>${esc(o.note||'-')}</td><td>${esc(o.time||'-')}</td>
+      <td class="no-print">
+        ${o.status==='Ordered' ? `<button class="success-btn" onclick="setOrderStatus('${esc(o.id)}','Served')">Served</button><button class="danger" onclick="setOrderStatus('${esc(o.id)}','Cancelled')">Cancel</button>` : '-'}
+      </td>
+    </tr>`).join('');
+  document.getElementById('noOrders').style.display=dayOrders.length?'none':'block';
+}
+function setOrderStatus(id,status){
+  const o=orders.find(x=>x.id===id); if(!o)return;
+  o.status=status; saveAll(); renderOrders(); renderWeeklyBilling();
+}
+
+function saveRate(){
+  RATE=Number(document.getElementById('rateInput').value||0);
+  localStorage.setItem(STORAGE_KEYS.rate,String(RATE));
+  renderWeeklyBilling();
+}
+function getMonday(dateStr){
+  const d=new Date(dateStr+'T00:00:00');
+  const day=d.getDay();
+  const diff=d.getDate()-(day===0?6:day-1);
+  d.setDate(diff);
+  return localDateKey(d);
+}
+function renderWeeklyBilling(){
+  const startStr=document.getElementById('weekStart').value || getMonday(today);
+  const start=new Date(startStr+'T00:00:00');
+  let totalMeals=0, html='';
+  for(let i=0;i<7;i++){
+    const d=new Date(start); d.setDate(start.getDate()+i);
+    const key=localDateKey(d);
+    const meals=orders.filter(o=>o.date===key && o.status==='Served').length;
+    totalMeals+=meals;
+    html+=`<tr><td>${key}</td><td>${d.toLocaleDateString('en-PH',{weekday:'long'})}</td><td>${meals}</td><td class="amount">${peso(RATE)}</td><td class="amount">${peso(meals*RATE)}</td></tr>`;
+  }
+  document.getElementById('weeklyTable').innerHTML=html;
+  document.getElementById('weeklyMeals').textContent=totalMeals;
+  document.getElementById('weeklyAmount').textContent=peso(totalMeals*RATE);
+}
+function exportWeeklyBillingCSV(){
+  const startStr=document.getElementById('weekStart').value || getMonday(today);
+  const start=new Date(startStr+'T00:00:00');
+  let csv='Date,Day,Billable Meals,Rate,Amount\n', total=0;
+  for(let i=0;i<7;i++){
+    const d=new Date(start); d.setDate(start.getDate()+i);
+    const key=localDateKey(d);
+    const meals=orders.filter(o=>o.date===key&&o.status==='Served').length;
+    total+=meals;
+    csv+=`${key},${d.toLocaleDateString('en-PH',{weekday:'long'})},${meals},${RATE},${meals*RATE}\n`;
+  }
+  csv+=`WEEKLY TOTAL,,${total},,${total*RATE}\n`;
+  downloadBlob(csv,`Weekly_Meal_Billing_${startStr}.csv`,'text/csv;charset=utf-8');
+}
+function exportWeeklyDetailCSV(){
+  const startStr=document.getElementById('weekStart').value || getMonday(today);
+  const start=new Date(startStr+'T00:00:00');
+  const end=new Date(start); end.setDate(start.getDate()+6);
+  const endStr=localDateKey(end);
+  const rows=orders.filter(o=>o.date>=startStr&&o.date<=endStr);
+  let csv='Date,Batch,Cadet,Status,Note,Time\n';
+  rows.forEach(o=>{
+    csv += [o.date,o.batch,o.cadetName,o.status,o.note||'',o.time||''].map(csvCell).join(',')+'\n';
+  });
+  downloadBlob(csv,`Weekly_Meal_Detail_${startStr}.csv`,'text/csv;charset=utf-8');
+}
+function csvCell(v){
+  const s=String(v??'');
+  return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;
+}
+function downloadBlob(content,name,type){
+  const blob=new Blob([content],{type});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+}
+function changePin(){
+  const p=document.getElementById('newPin').value.trim();
+  if(p.length<4){ document.getElementById('pinMessage').innerHTML='<div class="warning">Use at least 4 characters/numbers.</div>'; return; }
+  ADMIN_PIN=p; localStorage.setItem(STORAGE_KEYS.pin,p);
+  document.getElementById('newPin').value='';
+  document.getElementById('pinMessage').innerHTML='<div class="success">Admin PIN changed on this device/browser.</div>';
+}
+function renderAllAdmin(){ renderCadets(); renderOrders(); renderWeeklyBilling(); loadMenuForm(); }
+
+renderCadetView();
+</script>
+</body>
+</html>
