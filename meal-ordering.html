@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>School Meal Ordering System</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  background:#f4f6fb;
+  color:#172033;
+  padding-bottom:40px;
+}
+header{
+  background:linear-gradient(135deg,#4054d8,#6746c7);
+  color:white;
+  padding:25px 18px;
+  border-radius:0 0 25px 25px;
+}
+header h1{margin:0;font-size:25px}
+header p{margin:7px 0 0;opacity:.9}
+.container{max-width:850px;margin:auto;padding:16px}
+.card{
+  background:white;
+  padding:18px;
+  border-radius:18px;
+  margin-bottom:15px;
+  box-shadow:0 3px 14px rgba(0,0,0,.06);
+}
+h2,h3{margin-top:0}
+label{
+  display:block;
+  font-weight:600;
+  margin:12px 0 5px;
+}
+input,select,textarea{
+  width:100%;
+  padding:13px;
+  border:1px solid #d6dbe7;
+  border-radius:12px;
+  font-size:16px;
+  background:white;
+}
+textarea{min-height:80px}
+button{
+  border:0;
+  border-radius:12px;
+  padding:13px 16px;
+  font-size:15px;
+  font-weight:700;
+  margin:5px 3px;
+}
+.primary{background:#4858df;color:white}
+.secondary{background:#eceeff;color:#3543bc}
+.danger{background:#fff0f0;color:#a02020}
+.success{
+  background:#edf9f0;
+  color:#176b32;
+  padding:14px;
+  border-radius:12px;
+  margin-top:12px;
+}
+.warning{
+  background:#fff6e8;
+  color:#805000;
+  padding:14px;
+  border-radius:12px;
+  margin-top:12px;
+}
+.hidden{display:none}
+.tabs{
+  display:flex;
+  gap:8px;
+  margin-bottom:15px;
+}
+.tabs button{flex:1}
+.menu-box{
+  background:#f6f7ff;
+  padding:15px;
+  border-radius:14px;
+  line-height:1.7;
+}
+.stat-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+}
+.stat{
+  background:#f5f6fa;
+  border-radius:14px;
+  padding:14px;
+  text-align:center;
+}
+.stat strong{
+  display:block;
+  font-size:22px;
+  margin-top:4px;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:14px;
+}
+th,td{
+  border-bottom:1px solid #e2e5ec;
+  padding:9px 6px;
+  text-align:left;
+}
+.table-wrap{overflow-x:auto}
+.amount{text-align:right}
+.admin-only{
+  background:#fff8e8;
+  border:1px solid #f1dda6;
+}
+.small{font-size:13px;color:#687083}
+@media(min-width:650px){
+  .stat-grid{grid-template-columns:repeat(4,1fr)}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>School Meal Ordering</h1>
+<p>Daily Meal Reservation System</p>
+</header>
+
+<div class="container">
+
+<div class="tabs">
+<button id="cadetTab" class="primary" onclick="showCadet()">Cadet</button>
+<button id="adminTab" class="secondary" onclick="requestAdmin()">Provider / Admin</button>
+</div>
+
+<!-- ===================== -->
+<!-- CADET VIEW -->
+<!-- ===================== -->
+
+<section id="cadetView">
+
+<div class="card">
+<h2>Today's Meal</h2>
+
+<div class="small" id="todayDate"></div>
+
+<div class="menu-box">
+<strong id="cadetMenuTitle">Chicken Teriyaki Package</strong>
+<div id="cadetMenuDetails">
+Chicken Teriyaki<br>
+Steamed Rice<br>
+Mixed Vegetables<br>
+Dessert<br>
+Bottled Water
+</div>
+</div>
+</div>
+
+<div class="card">
+
+<h2>Reserve Your Meal</h2>
+
+<label>Grade</label>
+<select id="grade" onchange="loadStudents()">
+<option value="">Select Grade</option>
+<option>Grade 1</option>
+<option>Grade 2</option>
+<option>Grade 3</option>
+</select>
+
+<label>Cadet Name</label>
+<select id="student">
+<option value="">Select Grade First</option>
+</select>
+
+<label>Special Instructions (Optional)</label>
+<textarea id="studentNote"
+placeholder="Example: No vegetables"></textarea>
+
+<button class="primary" onclick="submitOrder()">
+Submit Meal Order
+</button>
+
+<div id="cadetMessage"></div>
+
+</div>
+
+</section>
+
+
+<!-- ===================== -->
+<!-- ADMIN LOGIN -->
+<!-- ===================== -->
+
+<section id="adminLogin" class="hidden">
+
+<div class="card">
+
+<h2>Provider / Admin Access</h2>
+
+<p>Enter the admin PIN to access meal records and billing.</p>
+
+<label>Admin PIN</label>
+<input
+id="adminPin"
+type="password"
+inputmode="numeric"
+placeholder="Enter PIN">
+
+<button class="primary" onclick="loginAdmin()">
+Open Admin
+</button>
+
+<button class="secondary" onclick="showCadet()">
+Cancel
+</button>
+
+<div id="loginMessage"></div>
+
+</div>
+
+</section>
+
+
+<!-- ===================== -->
+<!-- ADMIN VIEW -->
+<!-- ===================== -->
+
+<section id="adminView" class="hidden">
+
+<div class="card admin-only">
+
+<h2>Admin Menu Setup</h2>
+
+<p class="small">
+Billing information on this page is not displayed in the Cadet View.
+</p>
+
+<label>Menu Title</label>
+<input id="menuTitle" value="Chicken Teriyaki Package">
+
+<label>Package Contents</label>
+<textarea id="menuDetails">Chicken Teriyaki
+Steamed Rice
+Mixed Vegetables
+Dessert
+Bottled Water</textarea>
+
+<button class="primary" onclick="updateMenu()">
+Update Today's Menu
+</button>
+
+</div>
+
+
+<div class="card">
+
+<h2>Today's Meal Summary</h2>
+
+<div class="stat-grid">
+
+<div class="stat">
+Ordered
+<strong id="orderedCount">0</strong>
+</div>
+
+<div class="stat">
+Served
+<strong id="servedCount">0</strong>
+</div>
+
+<div class="stat">
+Not Ordered
+<strong id="notOrderedCount">9</strong>
+</div>
+
+<div class="stat">
+Today's Billing
+<strong id="todayBilling">₱0</strong>
+</div>
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+<h2>Today's Orders</h2>
+
+<div class="table-wrap">
+
+<table>
+
+<thead>
+<tr>
+<th>Grade</th>
+<th>Cadet</th>
+<th>Status</th>
+<th>Note</th>
+<th>Action</th>
+</tr>
+</thead>
+
+<tbody id="orderTable"></tbody>
+
+</table>
+
+</div>
+
+<div id="noOrders" class="small">
+No meal orders yet.
+</div>
+
+</div>
+
+
+<div class="card admin-only">
+
+<h2>Weekly Billing</h2>
+
+<label>Billing Week</label>
+<input id="weekDate" type="date">
+
+<div class="table-wrap">
+
+<table>
+
+<thead>
+<tr>
+<th>Date</th>
+<th>Billable Meals</th>
+<th class="amount">Rate</th>
+<th class="amount">Amount</th>
+</tr>
+</thead>
+
+<tbody id="weeklyTable"></tbody>
+
+<tfoot>
+<tr>
+<th>Weekly Total</th>
+<th id="weeklyMeals">0</th>
+<th></th>
+<th class="amount" id="weeklyAmount">₱0</th>
+</tr>
+</tfoot>
+
+</table>
+
+</div>
+
+<br>
+
+<button class="primary" onclick="printBilling()">
+Generate PDF / Print
+</button>
+
+<button class="secondary" onclick="exportCSV()">
+Export Excel-Compatible File
+</button>
+
+</div>
+
+
+<div class="card">
+
+<button class="secondary" onclick="showCadet()">
+Back to Cadet View
+</button>
+
+</div>
+
+</section>
+
+</div>
+
+
+<script>
+
+/* =====================================
+   BASIC SETTINGS
+===================================== */
+
+const RATE = 300;
+
+/*
+ Change this PIN before actual use.
+ This is only basic protection in a
+ single HTML prototype.
+*/
+const ADMIN_PIN = "1234";
+
+
+const students = {
+
+"Grade 1":[
+"Cadet A",
+"Cadet B",
+"Cadet C"
+],
+
+"Grade 2":[
+"Cadet A",
+"Cadet B",
+"Cadet C"
+],
+
+"Grade 3":[
+"Cadet A",
+"Cadet B",
+"Cadet C"
+]
+
+};
+
+
+/*
+ Prototype storage.
+ This keeps information while the page
+ remains open.
+
+ A real multi-user system will need
+ online database storage.
+*/
+
+let orders = [];
+
+let weeklyRecords = {};
+
+
+/* =====================================
+   DATE
+===================================== */
+
+const now = new Date();
+
+document.getElementById("todayDate").textContent =
+now.toLocaleDateString(
+"en-PH",
+{
+weekday:"long",
+year:"numeric",
+month:"long",
+day:"numeric"
+}
+);
+
+document.getElementById("weekDate").value =
+now.toISOString().slice(0,10);
+
+
+/* =====================================
+   VIEW CONTROL
+===================================== */
+
+function showCadet(){
+
+document.getElementById("cadetView")
+.classList.remove("hidden");
+
+document.getElementById("adminLogin")
+.classList.add("hidden");
+
+document.getElementById("adminView")
+.classList.add("hidden");
+
+document.getElementById("cadetTab")
+.className="primary";
+
+document.getElementById("adminTab")
+.className="secondary";
+
+}
+
+
+function requestAdmin(){
+
+document.getElementById("cadetView")
+.classList.add("hidden");
+
+document.getElementById("adminLogin")
+.classList.remove("hidden");
+
+document.getElementById("adminView")
+.classList.add("hidden");
+
+}
+
+
+function loginAdmin(){
+
+const pin =
+document.getElementById("adminPin").value;
+
+const message =
+document.getElementById("loginMessage");
+
+if(pin !== ADMIN_PIN){
+
+message.innerHTML =
+'<div class="warning">Incorrect PIN.</div>';
+
+return;
+
+}
+
+message.innerHTML="";
+
+document.getElementById("adminLogin")
+.classList.add("hidden");
+
+document.getElementById("adminView")
+.classList.remove("hidden");
+
+document.getElementById("cadetTab")
+.className="secondary";
+
+document.getElementById("adminTab")
+.className="primary";
+
+renderAdmin();
+
+}
+
+
+/* =====================================
+   STUDENTS
+===================================== */
+
+function loadStudents(){
+
+const grade =
+document.getElementById("grade").value;
+
+const select =
+document.getElementById("student");
+
+select.innerHTML =
+'<option value="">Select Cadet</option>';
+
+if(!grade) return;
+
+students[grade].forEach(function(name){
+
+const option =
+document.createElement("option");
+
+option.value=name;
+
+option.textContent=name;
+
+select.appendChild(option);
+
+});
+
+}
+
+
+/* =====================================
+   SUBMIT ORDER
+===================================== */
+
+function submitOrder(){
+
+const grade =
+document.getElementById("grade").value;
+
+const student =
+document.getElementById("student").value;
+
+const note =
+document.getElementById("studentNote")
+.value.trim();
+
+const message =
+document.getElementById("cadetMessage");
+
+
+if(!grade || !student){
+
+message.innerHTML =
+'<div class="warning">Please select your grade and name.</div>';
+
+return;
+
+}
+
+
+/*
+ Prevent duplicate daily orders.
+*/
+
+const duplicate =
+orders.some(function(order){
+
+return (
+order.grade === grade &&
+order.student === student
+);
+
+});
+
+
+if(duplicate){
+
+message.innerHTML =
+'<div class="warning">You already submitted your meal order today.</div>';
+
+return;
+
+}
+
+
+orders.push({
+
+grade:grade,
+
+student:student,
+
+note:note,
+
+status:"Ordered",
+
+time:new Date().toLocaleTimeString(
+"en-PH",
+{
+hour:"numeric",
+minute:"2-digit"
+}
+)
+
+});
+
+
+message.innerHTML =
+'<div class="success">'+
+'Your meal order has been submitted.'+
+'</div>';
+
+
+document.getElementById("student").value="";
+
+document.getElementById("studentNote").value="";
+
+renderAdmin();
+
+}
+
+
+/* =====================================
+   ADMIN MENU
+===================================== */
+
+function updateMenu(){
+
+const title =
+document.getElementById("menuTitle")
+.value.trim();
+
+const details =
+document.getElementById("menuDetails")
+.value.trim();
+
+
+document.getElementById("cadetMenuTitle")
+.textContent =
+title || "Today's Meal Package";
+
+
+document.getElementById("cadetMenuDetails")
+.innerHTML =
+(details || "")
+.replace(/\n/g,"<br>");
+
+
+alert("Today's menu has been updated.");
+
+}
+
+
+/* =====================================
+   MARK SERVED
+===================================== */
+
+function markServed(index){
+
+if(!orders[index]) return;
+
+orders[index].status="Served";
+
+renderAdmin();
+
+}
+
+
+/* =====================================
+   CANCEL ORDER
+===================================== */
+
+function cancelOrder(index){
+
+if(!orders[index]) return;
+
+orders[index].status="Cancelled";
+
+renderAdmin();
+
+}
+
+
+/* =====================================
+   ADMIN SUMMARY
+===================================== */
+
+function renderAdmin(){
+
+const activeOrders =
+orders.filter(function(order){
+
+return order.status !== "Cancelled";
+
+});
+
+
+const served =
+orders.filter(function(order){
+
+return order.status === "Served";
+
+});
+
+
+document.getElementById("orderedCount")
+.textContent =
+activeOrders.length;
+
+
+document.getElementById("servedCount")
+.textContent =
+served.length;
+
+
+document.getElementById("notOrderedCount")
+.textContent =
+Math.max(
+0,
+9-activeOrders.length
+);
+
+
+/*
+ Billing is based on SERVED meals.
+*/
+
+const billableMeals =
+served.length;
+
+
+document.getElementById("todayBilling")
+.textContent =
+peso(
+billableMeals * RATE
+);
+
+
+const tbody =
+document.getElementById("orderTable");
+
+tbody.innerHTML="";
+
+
+orders.forEach(function(order,index){
+
+const row =
+document.createElement("tr");
+
+
+row.innerHTML =
+
+"<td>"+
+escapeHTML(order.grade)+
+"</td>"+
+
+"<td>"+
+escapeHTML(order.student)+
+"</td>"+
+
+"<td>"+
+escapeHTML(order.status)+
+"</td>"+
+
+"<td>"+
+escapeHTML(order.note || "-")+
+"</td>"+
+
+"<td>"+
+
+(
+order.status === "Ordered"
+
+?
+
+'<button class="secondary" onclick="markServed('+
+index+
+')">Served</button>'+
+'<button class="danger" onclick="cancelOrder('+
+index+
+')">Cancel</button>'
+
+:
+
+"-"
+
+)+
+
+"</td>";
+
+
+tbody.appendChild(row);
+
+});
+
+
+document.getElementById("noOrders").style.display =
+orders.length ? "none" : "block";
+
+
+saveTodayToWeekly();
+
+renderWeekly();
+
+}
+
+
+/* =====================================
+   WEEKLY RECORD
+===================================== */
+
+function saveTodayToWeekly(){
+
+const date =
+new Date().toISOString().slice(0,10);
+
+
+const served =
+orders.filter(function(order){
+
+return order.status === "Served";
+
+}).length;
+
+
+weeklyRecords[date] = served;
+
+}
+
+
+/* =====================================
+   WEEKLY BILLING TABLE
+===================================== */
+
+function renderWeekly(){
+
+const tbody =
+document.getElementById("weeklyTable");
+
+tbody.innerHTML="";
+
+
+let totalMeals=0;
+
+
+Object.keys(weeklyRecords)
+.sort()
+.forEach(function(date){
+
+const meals =
+weeklyRecords[date];
+
+const amount =
+meals * RATE;
+
+totalMeals += meals;
+
+
+const row =
+document.createElement("tr");
+
+
+row.innerHTML =
+
+"<td>"+
+date+
+"</td>"+
+
+"<td>"+
+meals+
+"</td>"+
+
+'<td class="amount">'+
+peso(RATE)+
+"</td>"+
+
+'<td class="amount">'+
+peso(amount)+
+"</td>";
+
+
+tbody.appendChild(row);
+
+});
+
+
+document.getElementById("weeklyMeals")
+.textContent =
+totalMeals;
+
+
+document.getElementById("weeklyAmount")
+.textContent =
+peso(
+totalMeals * RATE
+);
+
+}
+
+
+/* =====================================
+   PDF / PRINT
+===================================== */
+
+function printBilling(){
+
+const oldTitle =
+document.title;
+
+document.title =
+"Weekly Meal Billing";
+
+window.print();
+
+document.title =
+oldTitle;
+
+}
+
+
+/* =====================================
+   EXCEL-COMPATIBLE EXPORT
+===================================== */
+
+function exportCSV(){
+
+let csv =
+"Date,Billable Meals,Rate,Amount\n";
+
+
+let totalMeals=0;
+
+
+Object.keys(weeklyRecords)
+.sort()
+.forEach(function(date){
+
+const meals =
+weeklyRecords[date];
+
+const amount =
+meals * RATE;
+
+totalMeals += meals;
+
+
+csv +=
+
+date+","+
+meals+","+
+RATE+","+
+amount+
+"\n";
+
+});
+
+
+csv +=
+
+"TOTAL,"+
+totalMeals+
+",,"+
+(totalMeals * RATE)+
+"\n";
+
+
+const blob =
+new Blob(
+[csv],
+{
+type:"text/csv;charset=utf-8;"
+}
+);
+
+
+const link =
+document.createElement("a");
+
+
+link.href =
+URL.createObjectURL(blob);
+
+
+link.download =
+"Weekly_Meal_Billing.csv";
+
+
+document.body.appendChild(link);
+
+link.click();
+
+document.body.removeChild(link);
+
+}
+
+
+/* =====================================
+   HELPERS
+===================================== */
+
+function peso(number){
+
+return "₱"+
+Number(number)
+.toLocaleString(
+"en-PH",
+{
+minimumFractionDigits:2,
+maximumFractionDigits:2
+}
+);
+
+}
+
+
+function escapeHTML(value){
+
+return String(value)
+
+.replaceAll("&","&amp;")
+
+.replaceAll("<","&lt;")
+
+.replaceAll(">","&gt;")
+
+.replaceAll('"',"&quot;")
+
+.replaceAll("'","&#039;");
+
+}
+
+
+renderAdmin();
+
+</script>
+
+</body>
+</html>
