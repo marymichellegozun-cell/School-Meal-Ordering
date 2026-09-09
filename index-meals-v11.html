@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>School Meal Ordering System V11</title>
+<style>
+:root{--p:#4858df;--p2:#6746c7;--bg:#f4f6fb;--text:#172033;--muted:#6c7485;--border:#dce1eb}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial;background:var(--bg);color:var(--text);padding-bottom:40px}
+header{background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;padding:24px 18px;border-radius:0 0 24px 24px}
+header h1{margin:0;font-size:24px}header p{margin:6px 0 0;opacity:.9}.container{max-width:1000px;margin:auto;padding:16px}
+.card{background:#fff;padding:18px;border-radius:18px;margin-bottom:15px;box-shadow:0 3px 14px #0000000f}
+h2,h3{margin-top:0}label{display:block;font-weight:600;margin:12px 0 5px}input,select,textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:12px;font-size:16px;background:#fff}
+textarea{min-height:75px}button{border:0;border-radius:12px;padding:12px 15px;font-weight:700;margin:4px 2px}.primary{background:var(--p);color:#fff}.secondary{background:#eceeff;color:#3543bc}.successbtn{background:#eaf8ee;color:#176b32}.danger{background:#fff0f0;color:#a02020}.hidden{display:none!important}
+.tabs,.subtabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:15px}.tabs button{flex:1}.subtabs button{background:#eef0f8;color:#34405b}.subtabs .active{background:var(--p);color:#fff}
+.menu{background:#f6f7ff;padding:14px;border-radius:14px;margin:10px 0}.menu h3{margin-bottom:5px}.small{font-size:13px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:1fr;gap:12px}.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.stat{background:#f5f6fa;border-radius:13px;padding:12px;text-align:center}.stat b{display:block;font-size:21px;margin-top:3px}
+.table{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px;min-width:650px}th,td{padding:9px 6px;border-bottom:1px solid #e4e7ee;text-align:left}.right{text-align:right}
+.msg{padding:11px;border-radius:10px;margin-top:10px}.ok{background:#edf9f0;color:#176b32}.warn{background:#fff6e8;color:#805000}
+@media(min-width:700px){.grid{grid-template-columns:1fr 1fr}.stats{grid-template-columns:repeat(4,1fr)}}
+.ticket{border:2px dashed #4858df;background:#fff;padding:16px;border-radius:14px;margin-top:14px}
+.ticket h3{margin:0 0 8px}.ticket-no{font-size:20px;font-weight:800;letter-spacing:.5px}
+@media print{header,.tabs,.subtabs,.noprint,#cadetView,#login{display:none!important}.container{max-width:none}.card{box-shadow:none}.hidden#printBilling{display:block!important}.ticket-print-only{display:block!important}}
+</style>
+</head>
+<body>
+<header><h1>School Meal Ordering</h1><p>Breakfast • Lunch • Dinner <span style="opacity:.75">• V11</span></p></header>
+<div class="container">
+<div class="tabs noprint">
+<button class="primary" onclick="cadetView()">Cadet</button>
+<button class="secondary" onclick="adminLogin()">Provider / Admin</button>
+</div>
+
+<section id="cadetView">
+<div class="card">
+<h2>Today’s Meal List</h2>
+<div class="small" id="dateText"></div>
+<p class="small">Please check what is included for Breakfast, Lunch, and Dinner before placing your order.</p>
+<div id="cadetMenus"></div>
+</div>
+<div class="card">
+<h2>Meal Reservation</h2>
+<label>Batch / Class</label>
+<select id="batch" onchange="studentsForBatch()">
+  <option value="">Select Batch</option>
+  <option>A320 Batch 2026-09A</option>
+  <option>A320 Batch 2026-09B</option>
+  <option>PPL Batch 12</option>
+</select>
+<label>Cadet Name</label>
+<select id="student">
+  <option value="">Select Cadet</option>
+  <option value="1">Adrian Cruz</option>
+  <option value="2">Bianca Reyes</option>
+  <option value="3">Carlo Mendoza</option>
+  <option value="4">Daniel Garcia</option>
+  <option value="5">Ella Santos</option>
+  <option value="6">Francis Lim</option>
+  <option value="7">Gabrielle Tan</option>
+  <option value="8">Henry Bautista</option>
+  <option value="9">Isabel Navarro</option>
+</select>
+<label>Select Meal</label>
+<select id="meal"><option>Breakfast</option><option>Lunch</option><option>Dinner</option></select>
+<label>Special Instruction <span class="small">(Optional)</span></label><textarea id="note"></textarea>
+<button class="primary" onclick="orderMeal()">Submit Meal Order</button><div id="cadetMsg"></div>
+<div id="ticketBox" class="hidden ticket"></div>
+</div></section>
+
+<section id="login" class="hidden"><div class="card"><h2>Provider / Admin</h2><label>PIN</label><input id="pin" type="password" inputmode="numeric">
+<label style="font-weight:500"><input id="rememberAdmin" type="checkbox" style="width:auto;margin-right:7px"> Remember this device</label>
+<button class="primary" onclick="openAdmin()">Open Admin</button>
+<button class="secondary" onclick="forgetAdmin()">Forget saved admin access</button>
+<div id="pinMsg"></div></div></section>
+
+<section id="admin" class="hidden">
+<div class="subtabs noprint">
+<button onclick="sec('menu')">Daily Menu</button><button onclick="sec('orders')">Daily Orders</button><button onclick="sec('billing')">Weekly Billing</button><button onclick="sec('cadets')">Cadets</button><button onclick="sec('provider')">Provider Settings</button>
+</div>
+
+<div id="menuSec">
+<div class="card"><h2>Daily Menu Setup</h2><label>Menu Date</label><input type="date" id="menuDate">
+<div class="grid">
+<div><h3>Breakfast</h3><input id="BreakfastTitle" placeholder="Breakfast title"><textarea id="BreakfastDetails" placeholder="Menu contents"></textarea></div>
+<div><h3>Lunch</h3><input id="LunchTitle" placeholder="Lunch title"><textarea id="LunchDetails" placeholder="Menu contents"></textarea></div>
+<div><h3>Dinner</h3><input id="DinnerTitle" placeholder="Dinner title"><textarea id="DinnerDetails" placeholder="Menu contents"></textarea></div>
+</div><button class="primary" onclick="saveMenus()">Save Menus</button></div></div>
+
+<div id="ordersSec" class="hidden">
+<div class="card"><h2>Daily Orders</h2><label>Date</label><input type="date" id="orderDate" onchange="renderOrders()">
+<div class="noprint" style="margin:10px 0">
+  <button class="primary" onclick="generateAllTickets()">Generate All Meal Tickets</button>
+  <span class="small">Print all active meal tickets for the selected date and stick them on the meal packages.</span>
+</div>
+<div class="stats">
+<div class="stat">Breakfast Orders<b id="bCount">0</b></div>
+<div class="stat">Lunch Orders<b id="lCount">0</b></div>
+<div class="stat">Dinner Orders<b id="dCount">0</b></div>
+<div class="stat">Ordered / Pending<b id="orderedPendingCount">0</b></div>
+<div class="stat">Served<b id="servedCount">0</b></div>
+<div class="stat">Not Yet Served<b id="notServedCount">0</b></div></div></div>
+<div class="card table"><table><thead><tr><th>Ticket No.</th><th>Cadet</th><th>Batch</th><th>Meal</th><th>Status</th><th>Note</th><th class="noprint">Action</th></tr></thead><tbody id="ordersBody"></tbody></table></div>
+</div>
+
+<div id="billingSec" class="hidden">
+<div class="card" id="printBilling">
+<div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
+  <img id="billingLogo" alt="" style="max-width:90px;max-height:70px;display:none">
+  <div>
+    <div id="billingProviderName" style="font-size:20px;font-weight:800"></div>
+    <div class="small">Meal Provider</div>
+  </div>
+</div>
+<h2>Weekly Meal Billing</h2>
+<div class="grid noprint">
+<div><label>Week Start</label><input type="date" id="weekStart" onchange="billing()"></div>
+<div><label>Rate per Meal</label><input type="number" id="rate" value="300" onchange="billing()"></div>
+<div><label>Billing Status</label>
+<select id="billingStatus" onchange="saveBillingStatus()"><option>Unpaid</option><option>Paid</option></select>
+</div>
+</div>
+<div style="margin:10px 0"><b>Status:</b> <span id="billingStatusLabel">Unpaid</span></div>
+<h3>Weekly Summary</h3><div class="table"><table><thead><tr><th>Date</th><th>Breakfast</th><th>Lunch</th><th>Dinner</th><th>Total</th><th class="right">Amount</th></tr></thead><tbody id="summaryBody"></tbody><tfoot><tr><th colspan="4">TOTAL</th><th id="totalMeals"></th><th class="right" id="totalAmount"></th></tr></tfoot></table></div>
+<h3 style="margin-top:25px">Billing Detail / Supporting List</h3>
+<div class="table"><table><thead><tr><th>Ticket No.</th><th>Date</th><th>Cadet Name</th><th>Batch</th><th>Meal</th><th>Status</th><th class="right">Rate</th><th class="right">Amount</th></tr></thead><tbody id="detailBody"></tbody></table></div>
+<div class="noprint" style="margin-top:14px">
+<button class="primary" onclick="downloadBillingPDF()">Download PDF</button>
+<button class="secondary" onclick="exportBilling()">Download Excel-Compatible CSV</button>
+<button class="secondary" onclick="window.print()">Print</button>
+</div>
+</div></div>
+
+
+<div id="cadetsSec" class="hidden">
+  <div class="card">
+    <h2>Add / Edit Cadet</h2>
+    <p class="small">You can change the roster anytime without editing the HTML code.</p>
+    <div class="grid">
+      <div><label>Cadet Name</label><input id="cadetNameInput" placeholder="Full name"></div>
+      <div><label>Batch / Class</label><input id="cadetBatchInput" placeholder="Example: A320 Batch 2026-10A"></div>
+    </div>
+    <label>Status</label>
+    <select id="cadetStatusInput"><option>Active</option><option>Inactive</option><option>Graduated</option></select>
+    <input id="editingCadetId" type="hidden">
+    <button class="primary" onclick="saveCadetRecord()">Save Cadet</button>
+    <button class="secondary" onclick="clearCadetForm()">Clear</button>
+    <div id="cadetEditMsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>Cadet List</h2>
+    <div class="table">
+      <table>
+        <thead><tr><th>Name</th><th>Batch</th><th>Status</th><th class="noprint">Action</th></tr></thead>
+        <tbody id="cadetsBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="providerSec" class="hidden">
+  <div class="card">
+    <h2>Provider Settings</h2>
+    <div class="grid">
+      <div>
+        <label>Meal Provider Name</label>
+        <input id="providerName" placeholder="Example: ABC Food Services">
+      </div>
+      <div>
+        <label>Ordering Cut-off Time</label>
+        <input id="cutoffTime" type="time">
+      </div>
+    </div>
+
+    <label>Provider Logo</label>
+    <input id="providerLogoInput" type="file" accept="image/*">
+    <div id="providerLogoPreview" style="margin-top:10px"></div>
+
+    <button class="primary" onclick="saveProviderSettings()">Save Provider Settings</button>
+<button class="secondary" onclick="resetDemoData()">Reset Demo Data</button>
+<p class="small">Reset Demo Data restores the sample cadet names, batches, menus and sample orders for testing.</p>
+    <div id="providerMsg"></div>
+  </div>
+</div>
+
+</section>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+function safeJSON(key,fallback){
+  try{
+    const raw=localStorage.getItem(key);
+    if(raw===null || raw==="") return fallback;
+    const parsed=JSON.parse(raw);
+    return parsed ?? fallback;
+  }catch(e){
+    console.warn("Could not read "+key,e);
+    return fallback;
+  }
+}
+const today=new Date().toISOString().slice(0,10), PIN="1234";
+let providerSettings=safeJSON("mealv9_provider",{});
+if(!providerSettings.name) providerSettings.name="Demo Meal Provider";
+if(!providerSettings.cutoff) providerSettings.cutoff="09:00";
+if(!providerSettings.logo) providerSettings.logo="";
+let billingStatuses=safeJSON("mealv9_billingstatus",{});
+const DEFAULT_CADETS=[
+{id:"1",name:"Adrian Cruz",batch:"A320 Batch 2026-09A",status:"Active"},{id:"2",name:"Bianca Reyes",batch:"A320 Batch 2026-09A",status:"Active"},{id:"3",name:"Carlo Mendoza",batch:"A320 Batch 2026-09A",status:"Active"},
+{id:"4",name:"Daniel Garcia",batch:"A320 Batch 2026-09B",status:"Active"},{id:"5",name:"Ella Santos",batch:"A320 Batch 2026-09B",status:"Active"},{id:"6",name:"Francis Lim",batch:"A320 Batch 2026-09B",status:"Active"},
+{id:"7",name:"Gabrielle Tan",batch:"PPL Batch 12",status:"Active"},{id:"8",name:"Henry Bautista",batch:"PPL Batch 12",status:"Active"},{id:"9",name:"Isabel Navarro",batch:"PPL Batch 12",status:"Active"}];
+let cadets=safeJSON("mealv9_cadets",null) || DEFAULT_CADETS.map(c=>Object.assign({},c));
+let menus=safeJSON("mealv9_menus",{}), orders=safeJSON("mealv9_orders",[]);
+if(!menus[today])menus[today]={Breakfast:{title:"Breakfast Package",details:"Egg Sandwich\nFresh Fruit\nJuice"},Lunch:{title:"Chicken Teriyaki Lunch",details:"Chicken Teriyaki\nSteamed Rice\nVegetables\nDessert\nWater"},Dinner:{title:"Beef Caldereta Dinner",details:"Beef Caldereta\nSteamed Rice\nVegetables\nFresh Fruit\nWater"}};
+if(!orders.length)orders=[
+{id:"o1",ticketNo:"MT-"+today.replaceAll("-","")+"-001",date:today,cadetId:"1",name:"Adrian Cruz",batch:"A320 Batch 2026-09A",meal:"Breakfast",status:"Served",note:""},
+{id:"o2",ticketNo:"MT-"+today.replaceAll("-","")+"-002",date:today,cadetId:"1",name:"Adrian Cruz",batch:"A320 Batch 2026-09A",meal:"Lunch",status:"Served",note:""},
+{id:"o3",ticketNo:"MT-"+today.replaceAll("-","")+"-003",date:today,cadetId:"2",name:"Bianca Reyes",batch:"A320 Batch 2026-09A",meal:"Lunch",status:"Served",note:""},
+{id:"o4",ticketNo:"MT-"+today.replaceAll("-","")+"-004",date:today,cadetId:"4",name:"Daniel Garcia",batch:"A320 Batch 2026-09B",meal:"Dinner",status:"Served",note:"No vegetables"},
+{id:"o5",ticketNo:"MT-"+today.replaceAll("-","")+"-005",date:today,cadetId:"7",name:"Gabrielle Tan",batch:"PPL Batch 12",meal:"Lunch",status:"Ordered",note:""}];
+document.getElementById("dateText").textContent=new Date().toLocaleDateString("en-PH",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+document.getElementById("menuDate").value=today;document.getElementById("orderDate").value=today;document.getElementById("weekStart").value=monday(today);
+function save(){
+  try{
+    localStorage.setItem("mealv9_cadets",JSON.stringify(cadets));
+    localStorage.setItem("mealv9_menus",JSON.stringify(menus));
+    localStorage.setItem("mealv9_orders",JSON.stringify(orders));
+    localStorage.setItem("mealv9_provider",JSON.stringify(providerSettings));
+    localStorage.setItem("mealv9_billingstatus",JSON.stringify(billingStatuses));
+  }catch(e){
+    console.warn("Local storage unavailable/full; app will continue for this session.",e);
+  }
+}
+function peso(n){return"₱"+Number(n).toLocaleString("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2})}
+function cadetView(){document.getElementById("cadetView").classList.remove("hidden");document.getElementById("login").classList.add("hidden");document.getElementById("admin").classList.add("hidden");renderMenus()}
+function adminLogin(){
+  document.getElementById("cadetView").classList.add("hidden");
+  document.getElementById("admin").classList.add("hidden");
+  if(localStorage.getItem("mealv9_adminRemembered")==="yes"){
+    document.getElementById("login").classList.add("hidden");
+    document.getElementById("admin").classList.remove("hidden");
+    sec("menu"); loadMenu(); return;
+  }
+  document.getElementById("login").classList.remove("hidden");
+}
+function openAdmin(){
+  if(document.getElementById("pin").value!==PIN){
+    document.getElementById("pinMsg").innerHTML='<div class="msg warn">Incorrect PIN.</div>';return;
+  }
+  if(document.getElementById("rememberAdmin").checked) localStorage.setItem("mealv9_adminRemembered","yes");
+  document.getElementById("login").classList.add("hidden");
+  document.getElementById("admin").classList.remove("hidden");
+  sec("menu");loadMenu();
+}
+function forgetAdmin(){
+  localStorage.removeItem("mealv9_adminRemembered");
+  document.getElementById("pin").value="";
+  document.getElementById("rememberAdmin").checked=false;
+  document.getElementById("pinMsg").innerHTML='<div class="msg ok">Saved admin access removed from this device.</div>';
+}
+function sec(x){
+  ["menu","orders","billing","cadets","provider"].forEach(s=>document.getElementById(s+"Sec").classList.toggle("hidden",s!==x));
+  if(x==="orders")renderOrders();
+  if(x==="billing")billing();
+  if(x==="cadets")renderCadets();
+  if(x==="provider")loadProviderSettings();
+}
+function renderMenus(){let m=menus[today]||{};
+document.getElementById("cutoffNotice").textContent="Ordering cut-off: "+formatTime(providerSettings.cutoff);
+document.getElementById("cadetMenus").innerHTML=["Breakfast","Lunch","Dinner"].map(x=>{
+  const title=m[x]?.title||"Menu not yet posted";
+  const details=m[x]?.details||"Please check again later.";
+  return `<div class="menu">
+    <h3>${x}</h3>
+    <div style="font-size:17px;font-weight:800;margin-bottom:4px">${title}</div>
+    <div>${details.replace(/\n/g,"<br>")}</div>
+  </div>`;
+}).join("");
+const mealSelect=document.getElementById("meal");
+if(mealSelect){
+  ["Breakfast","Lunch","Dinner"].forEach((x,i)=>{
+    const title=m[x]?.title;
+    mealSelect.options[i].textContent=title ? `${x} — ${title}` : x;
+  });
+}let activeCadets=cadets.filter(c=>c.status==="Active");
+let bs=[...new Set(activeCadets.map(c=>c.batch))];
+if(bs.length){
+  document.getElementById("batch").innerHTML='<option value="">Select Batch</option>'+bs.map(b=>`<option>${b}</option>`).join("");
+}
+studentsForBatch()}
+function studentsForBatch(){
+  let b=document.getElementById("batch").value;
+  let active=cadets.filter(c=>c.status==="Active");
+  if(!active.length) active=DEFAULT_CADETS.slice();
+  let list=b ? active.filter(c=>c.batch===b) : active;
+  document.getElementById("student").innerHTML='<option value="">Select Cadet</option>'+list.map(c=>`<option value="${c.id}">${c.name}</option>`).join("");
+}
+function nextTicketNo(){
+  const day=today.replaceAll("-","");
+  const todays=orders.filter(o=>o.date===today);
+  let max=0;
+  todays.forEach(o=>{
+    const mm=String(o.ticketNo||"").match(/-(\d{3})$/);
+    if(mm) max=Math.max(max,Number(mm[1]));
+  });
+  return "MT-"+day+"-"+String(max+1).padStart(3,"0");
+}
+function orderMeal(){
+  if(isPastCutoff()){
+    document.getElementById("cadetMsg").innerHTML='<div class="msg warn">Ordering is already closed for today. Cut-off time: '+formatTime(providerSettings.cutoff)+'.</div>';
+    return;
+  }
+  let id=document.getElementById("student").value,
+      c=cadets.find(x=>x.id===id),
+      meal=document.getElementById("meal").value;
+  if(!c){
+    document.getElementById("cadetMsg").innerHTML='<div class="msg warn">Please select your batch and name.</div>';
+    return;
+  }
+  if(orders.some(o=>o.date===today&&o.cadetId===id&&o.meal===meal&&o.status!=="Cancelled")){
+    document.getElementById("cadetMsg").innerHTML='<div class="msg warn">You already ordered '+meal+' today.</div>';
+    return;
+  }
+  const ticketNo=nextTicketNo();
+  const note=document.getElementById("note").value;
+  orders.push({id:"o"+Date.now(),ticketNo,date:today,cadetId:id,name:c.name,batch:c.batch,meal,status:"Ordered",note});
+  save();
+  document.getElementById("cadetMsg").innerHTML='<div class="msg ok">Your '+meal+' order has been submitted.</div>';
+  document.getElementById("ticketBox").classList.remove("hidden");
+  document.getElementById("ticketBox").innerHTML=
+    '<h3>Meal Ticket</h3>'+
+    '<div class="ticket-no">'+ticketNo+'</div>'+
+    '<div><b>'+c.name+'</b></div>'+
+    '<div>'+c.batch+'</div>'+
+    '<div>'+today+' • '+meal+'</div>'+
+    '<div class="small" style="margin-top:7px">Please present this ticket when claiming your meal.</div>'+
+    '<button class="secondary noprint" onclick="printTicket(\''+ticketNo+'\')">Print / Save Ticket</button>';
+}
+function printTicket(ticketNo){
+  const o=orders.find(x=>x.ticketNo===ticketNo); if(!o)return;
+  const w=window.open("","_blank");
+  w.document.write('<!doctype html><html><head><meta name="viewport" content="width=device-width"><title>'+ticketNo+'</title><style>body{font-family:Arial;padding:24px}.t{max-width:360px;border:2px dashed #333;padding:20px;border-radius:12px}.n{font-size:22px;font-weight:800;margin:8px 0}</style></head><body><div class="t"><h2>Meal Ticket</h2><div class="n">'+o.ticketNo+'</div><b>'+o.name+'</b><br>'+o.batch+'<br>'+o.date+' • '+o.meal+'<p>Please present this ticket when claiming your meal.</p></div><script>window.onload=()=>window.print()<\/script></body></html>');
+  w.document.close();
+}
+function loadMenu(){let m=menus[document.getElementById("menuDate").value]||{};["Breakfast","Lunch","Dinner"].forEach(x=>{document.getElementById(x+"Title").value=m[x]?.title||"";document.getElementById(x+"Details").value=m[x]?.details||""})}
+document.getElementById("menuDate").onchange=loadMenu;
+function saveMenus(){let d=document.getElementById("menuDate").value;menus[d]={};["Breakfast","Lunch","Dinner"].forEach(x=>menus[d][x]={title:document.getElementById(x+"Title").value,details:document.getElementById(x+"Details").value});save();save(); renderMenus();alert("Menus saved")}
+function renderOrders(){
+let d=document.getElementById("orderDate").value,os=orders.filter(o=>o.date===d);
+["Breakfast","Lunch","Dinner"].forEach((m,i)=>document.getElementById(["bCount","lCount","dCount"][i]).textContent=os.filter(o=>o.meal===m&&o.status!=="Cancelled").length);
+const pending=os.filter(o=>o.status==="Ordered").length;
+const served=os.filter(o=>o.status==="Served").length;
+document.getElementById("orderedPendingCount").textContent=pending;
+document.getElementById("servedCount").textContent=served;
+document.getElementById("notServedCount").textContent=pending;
+document.getElementById("ordersBody").innerHTML=os.map(o=>`<tr><td>${o.ticketNo||"-"}</td><td>${o.name}</td><td>${o.batch}</td><td>${o.meal}</td><td>${o.status}</td><td>${o.note||"-"}</td><td class="noprint">${o.status==="Ordered"?`<button class="successbtn" onclick="status('${o.id}','Served')">Served</button><button class="danger" onclick="status('${o.id}','Cancelled')">Cancel</button>`:"-"}</td></tr>`).join("")}
+function status(id,s){orders.find(o=>o.id===id).status=s;save();renderOrders();billing()}
+
+function formatTime(t){
+  if(!t) return "";
+  let [h,m]=t.split(":").map(Number), ap=h>=12?"PM":"AM";
+  h=h%12||12;
+  return h+":"+String(m).padStart(2,"0")+" "+ap;
+}
+function isPastCutoff(){
+  const now=new Date();
+  const [h,m]=(providerSettings.cutoff||"23:59").split(":").map(Number);
+  const cutoff=new Date();
+  cutoff.setHours(h,m,0,0);
+  return now>cutoff;
+}
+function loadProviderSettings(){
+  document.getElementById("providerName").value=providerSettings.name||"";
+  document.getElementById("cutoffTime").value=providerSettings.cutoff||"09:00";
+  const p=document.getElementById("providerLogoPreview");
+  p.innerHTML=providerSettings.logo?'<img src="'+providerSettings.logo+'" style="max-width:140px;max-height:100px;border-radius:8px">':'<span class="small">No logo uploaded.</span>';
+}
+document.getElementById("providerLogoInput").addEventListener("change",function(){
+  const f=this.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    providerSettings.logo=e.target.result;
+    document.getElementById("providerLogoPreview").innerHTML='<img src="'+providerSettings.logo+'" style="max-width:140px;max-height:100px;border-radius:8px">';
+  };
+  r.readAsDataURL(f);
+});
+
+function resetDemoData(){
+  if(!confirm("Reset the V11 demo data? This will replace the current V11 test roster, menus and orders.")) return;
+  localStorage.removeItem("mealv9_cadets");
+  localStorage.removeItem("mealv9_menus");
+  localStorage.removeItem("mealv9_orders");
+  localStorage.removeItem("mealv9_provider");
+  localStorage.removeItem("mealv9_billingstatus");
+  localStorage.removeItem("mealv9_adminRemembered");
+  location.reload();
+}
+function saveProviderSettings(){
+  providerSettings.name=document.getElementById("providerName").value.trim()||"Meal Provider";
+  providerSettings.cutoff=document.getElementById("cutoffTime").value||"09:00";
+  save(); renderMenus(); billing();
+  document.getElementById("providerMsg").innerHTML='<div class="msg ok">Provider settings saved.</div>';
+}
+function saveBillingStatus(){
+  const wk=document.getElementById("weekStart").value;
+  billingStatuses[wk]=document.getElementById("billingStatus").value;
+  save();
+  document.getElementById("billingStatusLabel").textContent=billingStatuses[wk];
+}
+
+function monday(s){let d=new Date(s+"T00:00:00"),day=d.getDay();d.setDate(d.getDate()-(day===0?6:day-1));return d.toISOString().slice(0,10)}
+function billing(){
+let st=document.getElementById("weekStart").value,r=Number(document.getElementById("rate").value||0),start=new Date(st+"T00:00:00"),sum="",details="",tm=0;
+document.getElementById("billingProviderName").textContent=providerSettings.name||"Meal Provider";
+const blogo=document.getElementById("billingLogo");
+if(providerSettings.logo){blogo.src=providerSettings.logo;blogo.style.display="block"}else{blogo.style.display="none"}
+const bstatus=billingStatuses[st]||"Unpaid";
+document.getElementById("billingStatus").value=bstatus;
+document.getElementById("billingStatusLabel").textContent=bstatus;for(let i=0;i<7;i++){let d=new Date(start);d.setDate(start.getDate()+i);let key=d.toISOString().slice(0,10),served=orders.filter(o=>o.date===key&&o.status==="Served"),b=served.filter(o=>o.meal==="Breakfast").length,l=served.filter(o=>o.meal==="Lunch").length,di=served.filter(o=>o.meal==="Dinner").length,t=b+l+di;tm+=t;sum+=`<tr><td>${key}</td><td>${b}</td><td>${l}</td><td>${di}</td><td>${t}</td><td class="right">${peso(t*r)}</td></tr>`;served.forEach(o=>details+=`<tr><td>${o.ticketNo||""}</td><td>${o.date}</td><td>${o.name}</td><td>${o.batch}</td><td>${o.meal}</td><td>${o.status}</td><td class="right">${peso(r)}</td><td class="right">${peso(r)}</td></tr>`)}document.getElementById("summaryBody").innerHTML=sum;document.getElementById("detailBody").innerHTML=details;document.getElementById("totalMeals").textContent=tm;document.getElementById("totalAmount").textContent=peso(tm*r)}
+
+async function downloadBillingPDF(){
+  try{
+    if(!window.jspdf || !window.jspdf.jsPDF){
+      alert("PDF library is still loading. Please wait a few seconds and try again.");
+      return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+    const st=document.getElementById("weekStart").value;
+    const rate=Number(document.getElementById("rate").value||0);
+    const status=billingStatuses[st]||"Unpaid";
+    let y=14;
+
+    if(providerSettings.logo){
+      try{ doc.addImage(providerSettings.logo,"JPEG",14,10,24,18); }catch(e){
+        try{ doc.addImage(providerSettings.logo,"PNG",14,10,24,18); }catch(_){}
+      }
+      doc.setFontSize(15); doc.setFont(undefined,"bold");
+      doc.text(providerSettings.name||"Meal Provider",43,17);
+      doc.setFontSize(9); doc.setFont(undefined,"normal");
+      doc.text("Meal Provider",43,23);
+      y=35;
+    }else{
+      doc.setFontSize(15); doc.setFont(undefined,"bold");
+      doc.text(providerSettings.name||"Meal Provider",14,y);
+      y+=7;
+    }
+
+    doc.setFontSize(16); doc.setFont(undefined,"bold");
+    doc.text("WEEKLY MEAL BILLING",14,y); y+=7;
+    doc.setFontSize(10); doc.setFont(undefined,"normal");
+    doc.text("Week Start: "+st,14,y);
+    doc.text("Billing Status: "+status,105,y);
+    y+=6;
+    doc.text("Rate per Served Meal: PHP "+rate.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}),14,y);
+    y+=8;
+
+    const start=new Date(st+"T00:00:00");
+    const summary=[];
+    const details=[];
+    let totalMeals=0;
+    for(let i=0;i<7;i++){
+      const d=new Date(start); d.setDate(start.getDate()+i);
+      const key=d.toISOString().slice(0,10);
+      const served=orders.filter(o=>o.date===key&&o.status==="Served");
+      const b=served.filter(o=>o.meal==="Breakfast").length;
+      const l=served.filter(o=>o.meal==="Lunch").length;
+      const di=served.filter(o=>o.meal==="Dinner").length;
+      const t=b+l+di; totalMeals+=t;
+      summary.push([key,b,l,di,t,"PHP "+(t*rate).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})]);
+      served.forEach(o=>details.push([
+        o.ticketNo||"",o.date,o.name,o.batch,o.meal,o.status,
+        "PHP "+rate.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}),
+        "PHP "+rate.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})
+      ]));
+    }
+
+    doc.setFontSize(12); doc.setFont(undefined,"bold"); doc.text("Billing Summary",14,y);
+    doc.autoTable({
+      startY:y+3,
+      head:[["Date","Breakfast","Lunch","Dinner","Total","Amount"]],
+      body:summary,
+      styles:{fontSize:8},
+      headStyles:{fontStyle:"bold"},
+      margin:{left:14,right:14}
+    });
+
+    let nextY=doc.lastAutoTable.finalY+8;
+    doc.setFontSize(11); doc.setFont(undefined,"bold");
+    doc.text("Total Served Meals: "+totalMeals,14,nextY);
+    doc.text("Total Amount: PHP "+(totalMeals*rate).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}),105,nextY);
+
+    nextY+=8;
+    doc.setFontSize(12); doc.text("Supporting Details - Served Meals",14,nextY);
+    doc.autoTable({
+      startY:nextY+3,
+      head:[["Ticket","Date","Cadet Name","Batch","Meal","Status","Rate","Amount"]],
+      body:details,
+      styles:{fontSize:6.7,cellPadding:1.4},
+      headStyles:{fontStyle:"bold"},
+      margin:{left:8,right:8},
+      columnStyles:{0:{cellWidth:22},1:{cellWidth:18},2:{cellWidth:30},3:{cellWidth:31},4:{cellWidth:17},5:{cellWidth:16},6:{cellWidth:24},7:{cellWidth:24}}
+    });
+
+    const pages=doc.getNumberOfPages();
+    for(let p=1;p<=pages;p++){
+      doc.setPage(p);
+      doc.setFontSize(7); doc.setFont(undefined,"normal");
+      doc.text("Generated from School Meal Ordering System",14,291);
+      doc.text("Page "+p+" of "+pages,180,291,{align:"right"});
+    }
+
+    const safeProvider=(providerSettings.name||"Meal-Provider").replace(/[^a-z0-9]+/gi,"-");
+    doc.save("Weekly-Meal-Billing_"+safeProvider+"_"+st+".pdf");
+  }catch(e){
+    console.error(e);
+    alert("Unable to create PDF. Please refresh the page and try again.");
+  }
+}
+
+function exportBilling(){let st=document.getElementById("weekStart").value,r=Number(document.getElementById("rate").value||0),start=new Date(st+"T00:00:00"),end=new Date(start);end.setDate(start.getDate()+6);let e=end.toISOString().slice(0,10),rows=orders.filter(o=>o.date>=st&&o.date<=e&&o.status==="Served"),csv="Date,Cadet Name,Batch,Meal,Status,Rate,Amount\n";rows.forEach(o=>csv+=`${o.date},"${o.name}","${o.batch}",${o.meal},${o.status},${r},${r}\n`);let blob=new Blob([csv],{type:"text/csv"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="Weekly_Meal_Billing_Detail.csv";a.click()}
+
+function renderCadets(){
+  document.getElementById("cadetsBody").innerHTML=cadets
+    .slice().sort((a,b)=>a.batch.localeCompare(b.batch)||a.name.localeCompare(b.name))
+    .map(c=>`<tr>
+      <td>${c.name}</td>
+      <td>${c.batch}</td>
+      <td>${c.status}</td>
+      <td class="noprint"><button class="secondary" onclick="editCadetRecord('${c.id}')">Edit</button></td>
+    </tr>`).join("");
+}
+function saveCadetRecord(){
+  const name=document.getElementById("cadetNameInput").value.trim();
+  const batch=document.getElementById("cadetBatchInput").value.trim();
+  const status=document.getElementById("cadetStatusInput").value;
+  const id=document.getElementById("editingCadetId").value;
+  if(!name||!batch){
+    document.getElementById("cadetEditMsg").innerHTML='<div class="msg warn">Please enter both cadet name and batch.</div>';
+    return;
+  }
+  if(id){
+    const c=cadets.find(x=>x.id===id);
+    if(c){c.name=name;c.batch=batch;c.status=status;}
+  }else{
+    cadets.push({id:"c"+Date.now(),name,batch,status});
+  }
+  save(); clearCadetForm(); renderCadets(); renderMenus();
+  document.getElementById("cadetEditMsg").innerHTML='<div class="msg ok">Cadet record saved.</div>';
+}
+function editCadetRecord(id){
+  const c=cadets.find(x=>x.id===id); if(!c)return;
+  document.getElementById("cadetNameInput").value=c.name;
+  document.getElementById("cadetBatchInput").value=c.batch;
+  document.getElementById("cadetStatusInput").value=c.status;
+  document.getElementById("editingCadetId").value=c.id;
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function clearCadetForm(){
+  document.getElementById("cadetNameInput").value="";
+  document.getElementById("cadetBatchInput").value="";
+  document.getElementById("cadetStatusInput").value="Active";
+  document.getElementById("editingCadetId").value="";
+}
+function generateAllTickets(){
+  const d=document.getElementById("orderDate").value;
+  const list=orders.filter(o=>o.date===d && o.status!=="Cancelled");
+  if(!list.length){alert("No active meal tickets for this date.");return;}
+  const cards=list.map(o=>`
+    <div class="ticket">
+      <div class="school">SCHOOL MEAL TICKET</div>
+      <div class="num">${o.ticketNo||"-"}</div>
+      <div class="name">${o.name}</div>
+      <div>${o.batch}</div>
+      <div class="meal">${o.meal}</div>
+      <div>${o.date}</div>
+      <div class="status">${o.status}</div>
+    </div>`).join("");
+  const w=window.open("","_blank");
+  w.document.write(`<!doctype html><html><head><meta name="viewport" content="width=device-width">
+    <title>Meal Tickets ${d}</title>
+    <style>
+      @page{margin:10mm}
+      body{font-family:Arial;margin:0;padding:10px}
+      .sheet{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+      .ticket{border:2px dashed #333;border-radius:10px;padding:12px;min-height:145px;break-inside:avoid}
+      .school{font-size:11px;font-weight:700}.num{font-size:17px;font-weight:800;margin:6px 0}
+      .name{font-size:17px;font-weight:800}.meal{font-size:20px;font-weight:900;margin:7px 0}
+      .status{font-size:11px;margin-top:5px}
+      button{padding:10px 14px;margin:0 8px 10px 0;border-radius:8px;border:1px solid #999;background:white;font-weight:700}
+      .actions{margin-bottom:8px}
+      @media print{button,.actions{display:none}}
+    </style></head><body>
+    <div class="actions">
+      <button onclick="window.print()">Print Tickets</button>
+      <button onclick="backToOrders()">Back to Daily Orders</button>
+    </div>
+    <script>
+      function backToOrders(){
+        try{
+          if(window.opener && !window.opener.closed){
+            window.opener.focus();
+            window.close();
+            return;
+          }
+        }catch(e){}
+        history.back();
+      }
+    <\/script>
+    <h2>Meal Package Tickets - ${d}</h2>
+    <div class="sheet">${cards}</div>
+    </body></html>`);
+  w.document.close();
+}
+renderMenus();
+</script></body></html>
